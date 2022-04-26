@@ -20,4 +20,4 @@ in second terminal:
 ```
 cd behavorial-model/simple_switch
 ./runtime_CLI < {path to this repo}/commands.txt 
-
+```
