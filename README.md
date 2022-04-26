@@ -6,3 +6,7 @@ Kayla Buki, Christie Ellks, Soumya Uppuganti, Peter Wang
 - (currently does not compile)
 
 `commands.txt` contains the contents of the tables that are loaded by mininet (psuedo control plane)
+
+### Commands
+compile: 
+`p4c --target bmv2 --arch v1model --std p4-16 binsearch.p4`
