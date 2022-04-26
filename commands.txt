@@ -1,10 +1,10 @@
-table_add table0 nhop_level0 0 => 0
-table_add table0 nhop_level0 1 => 1
+table_add table0 nhop_1a 0
+table_add table0 nhop_lb 1
 
-table_add table1a nhop_level1a 0 => 0
-table_add table1a nhop_level1a 1 => 1
-table_add table1b nhop_level1b 2 => 0
-table_add table1b nhop_level1b 3 => 1
+table_add table1a nhop_2a 0
+table_add table1a nhop_2b 1
+table_add table1b nhop_2c 2
+table_add table1b nhop_2d 3
 
 table_add table2a lookup 0 => A0
 table_add table2a lookup 1 => A1
