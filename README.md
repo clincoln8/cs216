@@ -3,7 +3,7 @@ Kayla Buki, Christie Ellks, Soumya Uppuganti, Peter Wang
 
 ## Binary Search
 `binary_search.p4` contains the data plane P4 code for forwarding based on staged binary search in the MyIngress component 
-- current status: compiles, but functionality has not been tested
+- **current status**: compiles, but functionality has not been tested
 
 `commands.txt` contains the contents of the tables that are loaded by mininet (psuedo control plane)
 
