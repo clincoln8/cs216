@@ -10,14 +10,16 @@ Kayla Buki, Christie Ellks, Soumya Uppuganti, Peter Wang
 ### Commands
 compile: 
 `p4c --target bmv2 --arch v1model --std p4-16 binsearch.p4`
+* note that p4c will generate the json file in the current directory (not where the p4 file is)
+
 
 run bmv2 and mininet:
 ```
 cd behavioral-model/mininet # navigate to mininet folder in behavorial-model repo
-sudo python 1sw_demo.py --behavioral-exe ../targets/simple_switch/simple_switch --json {path to this repo}/binsearch.json
+sudo python 1sw_demo.py --behavioral-exe ../targets/simple_switch/simple_switch --json {path to}/binsearch.json
 ```
 in second terminal:
 ```
 cd behavorial-model/simple_switch
-./runtime_CLI < {path to this repo}/commands.txt 
+./runtime_CLI < {path to}/commands.txt 
 ```
