@@ -1,20 +1,17 @@
-table_add table0 nhop_1a 0
-table_add table0 nhop_lb 1
-
-table_add table1a nhop_2a 0
-table_add table1a nhop_2b 1
-table_add table1b nhop_2c 2
-table_add table1b nhop_2d 3
-
-table_add table2a lookup 0 => 0xA0
-table_add table2a lookup 1 => 0xA1
-table_add table2b lookup 2 => 0xA2
-table_add table2b lookup 3 => 0xA3
-table_add table2c lookup 4 => 0xA4
-table_add table2c lookup 5 => 0xA5
-table_add table2d lookup 6 => 0xA6
-table_add table2d lookup 7 => 0xA7
-
+table_add table0 nhop_1a 0 =>
+table_add table0 nhop_1b 1 =>
+table_add table1a nhop_2a 0 => 
+table_add table1a nhop_2b 1 =>
+table_add table1b nhop_2c 2 =>
+table_add table1b nhop_2d 3 =>
+table_add table2a lookup 0 => A0:04:00:00:00:01 1
+table_add table2a lookup 1 => A1:04:00:00:00:01 2
+table_add table2b lookup 2 => A2:04:00:00:00:01 3
+table_add table2b lookup 3 => A3:04:00:00:00:01 4
+table_add table2c lookup 4 => A4:04:00:00:00:01 5
+table_add table2c lookup 5 => A5:04:00:00:00:01 6
+table_add table2d lookup 6 => A6:04:00:00:00:01 7
+table_add table2d lookup 7 => A7:04:00:00:00:01 8
 table_set_default table0 drop
 table_set_default table1a drop
 table_set_default table1b drop
