@@ -13,7 +13,7 @@ compile:
 * note that p4c will generate the json file in the current directory (not where the p4 file is)
 
 
-run bmv2 and mininet:
+run bmv2 and mininet starting from the [behavioral-model](https://github.com/p4lang/behavioral-model) root dir:
 ```
 cd behavioral-model/mininet # navigate to mininet folder in behavorial-model repo
 sudo python 1sw_demo.py --behavioral-exe ../targets/simple_switch/simple_switch --json {path to}/binsearch.json
