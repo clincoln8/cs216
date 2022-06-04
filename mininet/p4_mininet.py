@@ -106,7 +106,6 @@ class P4Switch(Switch):
         the switch was started successfully. This is only reliable if the Thrift
         server is started at the end of the init process"""
         while True:
-            print(os.path.join("/proc", str(pid)))
             if not os.path.exists(os.path.join("/proc", str(pid))):
                 return False
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

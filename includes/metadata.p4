@@ -30,6 +30,9 @@ struct metadata {
     intrinsic_metadata_t intrinsic;
     @name("queueing_metadata")
     queueing_metadata_t queueing;
+    @name("next_hop")
+    bit<32> next_hop;
+    
 }
 
 #endif /* _METADATA_P4_ */

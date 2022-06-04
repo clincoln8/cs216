@@ -1,37 +1,16 @@
 #include <core.p4>
 #include <v1model.p4>
 
+
 #include "includes/headers.p4"
 #include "includes/metadata.p4"
-
-#define ETHERTYPE_IPV4 16w0x0800
-const bit<16> TYPE_IPV4 = 0x800;
-
-
-//#include "includes/parser.p4"
-//#include "includes/deparser.p4"
 
 /*/
 |*| User constants
 /*/
 
-// Predefined threshold for HHH detection
-#define HHH_THRESHOLD 10000
-
 // Number of stages
 #define HHH_TABCOUNT 32
-
-// Active timeout (10s)
-#define HHH_ATIMEOUT 48w10000000
-
-// Inactive timeout (1min)
-#define HHH_ITIMEOUT 48w60000000
-
-// First prefix length
-#define HHH_FIRSTLEN 16
-
-// Last prefix length
-#define HHH_LASTLEN 32
 
 #define HASH_ENTRY_SIZE 66
 
@@ -48,7 +27,7 @@ const bit<16> TYPE_IPV4 = 0x800;
 // Bitvector length
 #define HHH_VECSIZE 32
 
-// extend ip to 33 bits
+// extend ip to 33 bits for prefix encoding
 #define EXTENDER 0x100000000
 
 /*/
@@ -142,18 +121,7 @@ struct hhh_metadata_t {
 }
 
 /*/
-|*| HHH digest type
-/*/
-struct hhh_digest_t {
-    bit<32> srcAddr;
-    bit<1> need_table_query;
-    bit<33> cur_prefix;
-    bit<32> next_hop;
-    bit<4> hash_hits;
-}
-
-/*/
-|*| HHH processing control block
+|*| Dleft ingress control block
 /*/
 control process_dleft(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
 
@@ -401,8 +369,6 @@ control process_dleft(inout headers hdr, inout metadata meta, inout standard_met
         bit<1> longer_exists = hash_val[32:32];
         bit<32> next_hop = hash_val[31:0];
 
-        if(hash_val > 0) {hhh.hash_hits[3:3] = 1;} // TODO update hash hit depending if it is crc or rand
-
         if(prefix == hhh.cur_prefix && longer_exists == 0 ) {
             hhh.need_table_query = 0;
             hhh.next_hop = next_hop;
@@ -429,6 +395,19 @@ control process_dleft(inout headers hdr, inout metadata meta, inout standard_met
         hhh.new_hash_entry = hhh.cur_prefix ++ longer_exists ++ next_hop; 
 
     }
+    
+        // Forward
+    @name("forward") action forward(bit<48> dst_mac, bit<9> egress_port) {
+	hdr.ethernet.dstAddr = dst_mac;
+    	standard_metadata.egress_spec = egress_port;
+    }
+    
+    // Drop
+    @name("drop") action drop() {
+    mark_to_drop(standard_metadata);
+    }
+    
+
 
     // Compute Hash Indexes for each length
     @name("compute_tab") table compute_tab {
@@ -450,12 +429,17 @@ control process_dleft(inout headers hdr, inout metadata meta, inout standard_met
         key = { hhh.vector: ternary; }
     }
 
-
     // HHH lookup table
-    @name("lookup_tab") table lookup_tab {
-        actions = { lpm_table_match; }
-        default_action = lpm_table_match(0, 0, 0);
-        key = { hdr.ipv4.srcAddr: lpm; }
+    @name("prefix_tab") table prefix_tab {
+        actions = { lpm_table_match; drop; }
+        default_action = drop();
+        key = { hdr.ipv4.dstAddr: lpm; }
+    }
+    
+    // HHH lookup table
+    @name("forward_tab") table forward_tab {
+        actions = { forward; }
+        key = { meta.next_hop: exact; }
     }
 
     apply {
@@ -471,10 +455,8 @@ control process_dleft(inout headers hdr, inout metadata meta, inout standard_met
         // Index into Hash Tables
         hash_tab.apply(); 
         
-        
         bit<HASH_ENTRY_SIZE> temp;
         
-
         crc_hash_reg.read(temp, hhh.crc_idx);
         parse_hash_val(temp);
 
@@ -488,9 +470,10 @@ control process_dleft(inout headers hdr, inout metadata meta, inout standard_met
 
         temp = 0;
 
+	 hhh.need_table_query = 1;    // TODO remove; debug why this reverts to 0 when nothing is in cache
         // Search prefix table and add to hash (if necessary)
         if(hhh.need_table_query == 1) {
-            lookup_tab.apply();
+            prefix_tab.apply();
            
             crc_hash_reg.read(temp, hhh.crc_idx);
             if(temp ==  0) {
@@ -500,40 +483,20 @@ control process_dleft(inout headers hdr, inout metadata meta, inout standard_met
 
             } else{
 
-                hhh.hash_hits[1:1] = 1;
                 rand_hash_reg.read(temp, hhh.rand_idx);
             
                 if(temp == 0) {
                     // Write to Random Hash
                     rand_hash_reg.write(hhh.rand_idx, hhh.new_hash_entry);        
                 } else{
-                
-                    hhh.hash_hits[0:0] = 1;
-                    // TODO: what to do in case of double collision?
-            
+                	// Double Collision; do nothing
                  }
             }
         }
-
-        // TODO implement set mac dst addr based on next hop
-        if(hdr.ipv4.dstAddr[31:8] == 0x0A0001) {
-            hdr.ethernet.dstAddr = 0x000400000001;
-
-            standard_metadata.egress_spec = 1;
-        } else{
-            hdr.ethernet.dstAddr = 0x000400000004;
-            standard_metadata.egress_spec = 4;
-        }
-        
-        // Inform controller
-        digest<hhh_digest_t>(1, {
-            hdr.ipv4.srcAddr,
-            hhh.need_table_query,
-            hhh.cur_prefix,
-            hhh.next_hop,
-            hhh.hash_hits
-        });
-        
+	
+	// Set next ethernet hop based on next hop
+        meta.next_hop = hhh.next_hop;
+	forward_tab.apply();
    }
 }
 
@@ -550,8 +513,7 @@ parser ParserImpl(packet_in packet,
         packet.extract(hdr.ethernet);
         transition select(hdr.ethernet.etherType) {
             0x0800: parse_ipv4;
-            //default: accept;
-            //default: parse_ipv4;
+            default: accept;
         }
     }
 
@@ -559,7 +521,6 @@ parser ParserImpl(packet_in packet,
         packet.extract(hdr.ipv4);
         transition accept;
     }
-
 }
 
 
@@ -569,17 +530,10 @@ parser ParserImpl(packet_in packet,
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("process_dleft") process_dleft() process_dleft_0;
 
- table debug {
- key = {
- hdr.ipv4.dstAddr : exact;
- }
- actions = { }
- }
-
     apply {
- debug.apply();
+
         // Process HHH if IP header valid
-        if (hdr.ipv4.isValid()) {   // TODO: IPv6 support?!
+        if (hdr.ipv4.isValid()) { 
             process_dleft_0.apply(hdr, meta, standard_metadata);
         }
     }
@@ -594,16 +548,9 @@ control verifyChecksum(inout headers hdr, inout metadata meta) {
 |*| Egress control block
 /*/
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+        
     apply {
-            if(standard_metadata.egress_spec == 1) {
 
-            hdr.ethernet.srcAddr = 0x00aabb000001;
-
-        } else{
-
-            hdr.ethernet.srcAddr = 0x00aabb000004;
-
-        }
     }
 }
 
