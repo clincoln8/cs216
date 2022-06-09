@@ -12,7 +12,7 @@
 
 #define HASH_ENTRY_SIZE 66 // hash_entry format: [33 bits encoded prefix][1 bit longer exists][32 bits next hop]
 
-// Lookup table size in each stage // TODO update tabsize for new hash entry
+// Lookup table size in each stage
 #define HHH_TABSIZE 32w8192 
 
 // Size of registers
@@ -371,7 +371,7 @@ control process_dleft(inout headers hdr, inout metadata meta, inout standard_met
 
         if(prefix == hhh.cur_prefix && longer_exists == 0 ) {
             hhh.need_table_query = 0;
-            hhh.next_hop = next_hop;
+            hhh.next_hop = next_hop;            
         }
     }
 
@@ -456,8 +456,7 @@ control process_dleft(inout headers hdr, inout metadata meta, inout standard_met
             prefix_tab.apply();
 
             h1_reg.read(temp, hhh.h1_idx);
-            if(temp ==  0) {
-
+            if(temp == 0 || temp[65:33] == hhh.cur_prefix) { // if prefix is already in hash entry, then overwriting will change nothing
                 // Write to CRC Hash
                 h1_reg.write(hhh.h1_idx, hhh.new_hash_entry);
 
@@ -465,7 +464,7 @@ control process_dleft(inout headers hdr, inout metadata meta, inout standard_met
 
                 h2_reg.read(temp, hhh.h2_idx);
 
-                if(temp == 0) {
+                if(temp == 0 || temp[65:33] == hhh.cur_prefix) {  // if prefix is already in hash entry, then overwriting will change nothing
                     // Write to Random Hash
                     h2_reg.write(hhh.h2_idx, hhh.new_hash_entry);        
                 } else{
