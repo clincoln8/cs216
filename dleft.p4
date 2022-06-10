@@ -119,7 +119,10 @@ control process_dleft(inout headers hdr, inout metadata meta, inout standard_met
 
     // Hash metadata instance
     hhh_metadata_t hhh;
-
+    counter(1,CounterType.packets) c;
+    counter(1,CounterType.packets) d;
+    counter(1,CounterType.packets) e;
+    counter(1,CounterType.packets) v;
     // prefix hash registers
     register<bit<HASH_ENTRY_SIZE>>(HHH_REGSIZE) h1_reg; // crc32 hash
     register<bit<HASH_ENTRY_SIZE>>(HHH_REGSIZE) h2_reg; // identity
@@ -362,7 +365,6 @@ control process_dleft(inout headers hdr, inout metadata meta, inout standard_met
 
     // Parse a single Hash Entry into Prefix, Longer Exists Bit, and Next Hop - helper function
     @name("parse_hash_val") action parse_hash_val(bit<HASH_ENTRY_SIZE> hash_val) {
-
         hhh.need_table_query = 1;
 
         bit<33> prefix = hash_val[65:33];
@@ -418,7 +420,7 @@ control process_dleft(inout headers hdr, inout metadata meta, inout standard_met
     }
 
     apply {
-
+        
         hhh.need_table_query = 1;    
         hhh.next_hop = 0;
         hhh.cur_prefix = 0;
@@ -437,8 +439,8 @@ control process_dleft(inout headers hdr, inout metadata meta, inout standard_met
 
         bit<HASH_ENTRY_SIZE> temp;
 
-        if(hhh.cur_len > 0){
-
+        if(hhh.cur_len >= 0){
+            c.count(0);
             // check for hash1 match
             h1_reg.read(temp, hhh.h1_idx);
             parse_hash_val(temp);
@@ -449,22 +451,22 @@ control process_dleft(inout headers hdr, inout metadata meta, inout standard_met
                 parse_hash_val(temp);
             }
         }
-
         // Search prefix table and add to hash (if necessary)
         if(hhh.need_table_query == 1) {
+            
             hhh.new_hash_entry = 0;
             prefix_tab.apply();
 
             h1_reg.read(temp, hhh.h1_idx);
             if(temp ==  0) {
-
+                d.count(0);
                 // Write to CRC Hash
                 h1_reg.write(hhh.h1_idx, hhh.new_hash_entry);
 
             } else{
-
+                e.count(0);
                 h2_reg.read(temp, hhh.h2_idx);
-
+           
                 if(temp == 0) {
                     // Write to Random Hash
                     h2_reg.write(hhh.h2_idx, hhh.new_hash_entry);        
