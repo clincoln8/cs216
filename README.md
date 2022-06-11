@@ -23,7 +23,7 @@ In first terminal, check connectivity:
 ```
 h1 ping h4
 ```
-with current tables, h1 h2 and h4 should all be reachable from each other. Using ping with h3, h5, and h6 will cause the command to hang.
+with current tables, h1 h2, h3 and h4 should all be reachable from each other. Using ping with h5 and h6 will cause the command to hang.
 
 ## Test with bgp data
 

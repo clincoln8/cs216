@@ -361,6 +361,9 @@ control process_dleft(inout headers hdr, inout metadata meta, inout standard_met
     @name("lpm_table_match") action lpm_table_match(bit<8> cur_len, bit<1> longer_exists, bit<32> next_hop) {
         hhh.cur_len = cur_len;
         hhh.next_hop = next_hop;
+        
+        h1_index(hhh.h1_idx, hhh.cur_len);
+        h2_index(hhh.h2_idx, hhh.cur_len);
 
         // compute hhh.hash_entry by concatenation
         hhh.cur_prefix =  (bit<33>)(((bit<1>)1++hhh.key) >> (32-hhh.cur_len)); 
@@ -379,7 +382,8 @@ control process_dleft(inout headers hdr, inout metadata meta, inout standard_met
 
         if(prefix == hhh.cur_prefix && longer_exists == 0 ) {
             hhh.need_table_query = 0;
-            hhh.next_hop = next_hop;            
+            hhh.next_hop = next_hop; 
+            // hhh.next_hop = 0; uncomment to check cache hits           
         }
     }
 
